@@ -211,6 +211,8 @@ class Interpret (TypeParser):
             "jumpifneq": self.jumpifneq,
             "exit": self.exitInst,
             "dprint": self.dprint,
+            "Int2Float": self.Int2Float,
+            "Float2Int": self.Float2Int
             }
     def loadInputFile(self, file):
         self.inputFile = open(file, 'r')
@@ -283,6 +285,7 @@ class Interpret (TypeParser):
         if typeArg1 != 'bool' or typeArg2 != 'bool':
             self.error.invalidType()
         return arg1, arg2
+
     def ConditionedJumpCriteria(self, args):
         if len(args) != 2:
             self.error.invalidXML()
@@ -299,6 +302,7 @@ class Interpret (TypeParser):
             self.error.invalidXML()
         typeArg, arg = self.parseType(args[0].get('type'), args[0].get('value'))
         stderr.write(arg)
+
     def exitInst(self, args, i):
         if len(args) != 1:
             self.error.invalidXML()
@@ -316,16 +320,40 @@ class Interpret (TypeParser):
         if index == None:
             self.error.duplicateVariable()
         return index
+
     def readFromFile(self, args, i):
         if len(args) != 2:
             self.error.invalidXML()
         name,frame = self.getFrame(args[0].get('value'))
         frame.changeValue(name, args[1].get('value'), self.inputFile.readline())
+
     def stdinRead(self, args, i):
         if len(args) != 2:
             self.error.invalidXML()
         name,frame = self.getFrame(args[0].get('value'))
         frame.changeValue(name, args[1].get('value'), input())
+
+    def Int2Float(self, args, i):
+        if len(args) != 2:
+            self.error.invalidXML()
+        typeArg, arg = self.parseType(args[1].get('type'), args[1].get('value'))
+        if typeArg == None and arg == None:
+            self.error.unset()
+        if typeArg != 'int':
+            self.error.invalidType()
+        name, frame = self.getFrame(args[0].get('value'))
+        frame.changeValue(name, 'float', float(arg))
+    
+    def Float2Int(self, args, i):
+        if len(args) != 2:
+            self.error.invalidXML()
+        typeArg, arg = self.parseType(args[1].get('type'), args[1].get('value'))
+        if typeArg == None and arg == None:
+            self.error.unset()
+        if typeArg != 'float':
+            self.error.invalidType()
+        name, frame = self.getFrame(args[0].get('value'))
+        frame.changeValue(name, 'int', int(arg))
 
     def jumpifeq(self, args, i):
         arg1, arg2 = self.ConditionedJumpCriteria(args[1:])
