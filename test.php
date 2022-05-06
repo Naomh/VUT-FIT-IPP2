@@ -1,4 +1,7 @@
 <?php
+# Author: Tomáš Švondr
+# xlogin: xsvond00
+#######################
 class testSet{
     public $path = '';
     public $results_int = [];
@@ -21,11 +24,7 @@ class Result{
         $this->type = $type;
     }
 }
-/*class HtmlBuilder{
-    private $file = fopen('test.html','w');
-    private $builder=new DOMDocument();
 
-}*/
 class TestConfig{
     private $tested=0;
     private $passed=0;
@@ -51,7 +50,7 @@ class TestConfig{
         [--recursive] -- runs test through every subdirectory in the directory\n");
         exit(0);
     }
-    public function parseArgs($argv){
+    public function parseArgs($argv){ #zpracování argumentů programu
         foreach($argv as $arg){
             if(preg_match('/^--directory=(.*)$/', $arg, $matches)){
                 $this->directory = $matches[1];
@@ -102,7 +101,7 @@ class TestConfig{
         }
 
     }
-    public function getTests(){
+    public function getTests(){ #prohledá zadaný adresář a najde všechny zdrojové soubory testů
         exec("find $this->directory $this->recursive -type f -name \"*.src\"",$this->tests, $return);
         if($return != 0){
             print("couldn't reach the directory\n");
@@ -113,22 +112,22 @@ class TestConfig{
             exit(0);
         }
     }
-    public function runTests(){
+    public function runTests(){ #spoustí testy
   
         foreach ($this->tests as $test){
             $expected = 0;
             $basename = preg_replace('/.src$/', '', $test);
             $dirname = preg_replace('/[^\/]*$/','',$basename);
-            if (!$this->lastResult){
-                $this->lastResult = new testSet($dirname);
-            }elseif($this->lastResult->path != $dirname){
-                array_push($this->results, $this->lastResult);
-                $this->lastResult = new testSet($dirname);
+            if (!$this->lastResult){                            #
+                $this->lastResult = new testSet($dirname);      #
+            }elseif($this->lastResult->path != $dirname){       # při vstupu do nového adresáře s novými testy se vytvoří objekt
+                array_push($this->results, $this->lastResult);  # obsahující pro zapisování výsledků testů
+                $this->lastResult = new testSet($dirname);      #
             }
             print("------------------------------------------------------------------------------------\n");
             print($basename."\n");
             print("------------------------------------------------------------------------------------\n");
-            if(file_exists("$basename.rc")){
+            if(file_exists("$basename.rc")){ # kontrola existujícího souboru s předpokládanou návratovou hodnotou
                 $content = file_get_contents("$basename.rc");
                 if($content === false){
                     print("couldn't get file content");
@@ -145,7 +144,7 @@ class TestConfig{
        }
        array_push($this->results,$this->lastResult);
     }
-    function testInterpret($basename, $expected){
+    function testInterpret($basename, $expected){ #testování interpretu
         $extention = file_exists("$basename.parsed")? "parsed":"src";
         if((file_exists("$basename.$extention")) && file_exists("$basename.in")){
             exec("python3 $this->int_script --source=$basename.$extention --input=$basename.in > $basename.tout",$outmsg, $code);
@@ -170,10 +169,10 @@ class TestConfig{
             
         }
     }
-    function testParser($basename, $expected){
+    function testParser($basename, $expected){ #testy pro parser
         if((file_exists("$basename.src"))){
             exec("php $this->parse_script <$basename.src > $basename.parsed",$outmsg, $code);
-            if($this->type == 'both'){
+            if($this->type == 'both'){ # předejití špatně vyhodnocenému testu -- za předpokladu, že návratový kód v souboru je určen pro interpret
                 return;
             }
             $dirname = preg_replace('/[^\/]*$/','',$basename);
@@ -198,7 +197,7 @@ class TestConfig{
         
         }
     }
-    public function BuildDoc(){
+    public function BuildDoc(){ #tvorba html dokumentu pro vypsání výsledků testu
         $file = fopen("test.html", 'w');
         $interpretHtml = "<div class=\"card\">";
         $parserHtml=$interpretHtml;
@@ -286,6 +285,7 @@ class TestConfig{
         {$content.=$parserHtml;}
         $content.="</body></html>";
         fwrite($file,$content);
+        print($content);
         fclose($file);
     }
 }

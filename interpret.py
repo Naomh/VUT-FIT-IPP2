@@ -10,9 +10,9 @@
 from sys import stdin, stderr
 import argparse
 import re
+from tracemalloc import start
 import xml.etree.ElementTree as ET
 
-from numpy import interp
 
 #Třída na zpracování argumentů
 class Error_class():
@@ -211,8 +211,6 @@ class Interpret (TypeParser):
             "jumpifneq": self.jumpifneq,
             "exit": self.exitInst,
             "dprint": self.dprint,
-            "Int2Float": self.Int2Float,
-            "Float2Int": self.Float2Int
             }
     def loadInputFile(self, file):
         self.inputFile = open(file, 'r')
@@ -251,12 +249,17 @@ class Interpret (TypeParser):
 
     def write(self,args, i):
         if len(args) != 1:
-            print("num of args write")
             self.error.exit_code(32)
         valueType,value = self.parseType(args[0].get('type'), args[0].get('value'))
         if valueType == None and value == None:
             self.error.unset()
-        print(value)
+        if valueType != 'bool' or valueType != 'nil':
+            print(value, end='')
+        elif valueType == 'bool':
+            print(value)
+        else:
+            print();
+
 
     def arithmeticOperationCriteria(self, typeArg1, typeArg2, arg1, arg2):
         if typeArg1 == None and arg1 == None or typeArg2 == None and arg2 == None:
@@ -285,7 +288,6 @@ class Interpret (TypeParser):
         if typeArg1 != 'bool' or typeArg2 != 'bool':
             self.error.invalidType()
         return arg1, arg2
-
     def ConditionedJumpCriteria(self, args):
         if len(args) != 2:
             self.error.invalidXML()
@@ -302,7 +304,6 @@ class Interpret (TypeParser):
             self.error.invalidXML()
         typeArg, arg = self.parseType(args[0].get('type'), args[0].get('value'))
         stderr.write(arg)
-
     def exitInst(self, args, i):
         if len(args) != 1:
             self.error.invalidXML()
@@ -320,40 +321,16 @@ class Interpret (TypeParser):
         if index == None:
             self.error.duplicateVariable()
         return index
-
     def readFromFile(self, args, i):
         if len(args) != 2:
             self.error.invalidXML()
         name,frame = self.getFrame(args[0].get('value'))
         frame.changeValue(name, args[1].get('value'), self.inputFile.readline())
-
     def stdinRead(self, args, i):
         if len(args) != 2:
             self.error.invalidXML()
         name,frame = self.getFrame(args[0].get('value'))
         frame.changeValue(name, args[1].get('value'), input())
-
-    def Int2Float(self, args, i):
-        if len(args) != 2:
-            self.error.invalidXML()
-        typeArg, arg = self.parseType(args[1].get('type'), args[1].get('value'))
-        if typeArg == None and arg == None:
-            self.error.unset()
-        if typeArg != 'int':
-            self.error.invalidType()
-        name, frame = self.getFrame(args[0].get('value'))
-        frame.changeValue(name, 'float', float(arg))
-    
-    def Float2Int(self, args, i):
-        if len(args) != 2:
-            self.error.invalidXML()
-        typeArg, arg = self.parseType(args[1].get('type'), args[1].get('value'))
-        if typeArg == None and arg == None:
-            self.error.unset()
-        if typeArg != 'float':
-            self.error.invalidType()
-        name, frame = self.getFrame(args[0].get('value'))
-        frame.changeValue(name, 'int', int(arg))
 
     def jumpifeq(self, args, i):
         arg1, arg2 = self.ConditionedJumpCriteria(args[1:])
@@ -565,7 +542,6 @@ class Interpret (TypeParser):
 
     def defvar(self, args, i):
         if len(args) != 1:
-            print("num of args defvar")
             self.error.exit_code(31)
         variable = self.varSplit(args[0].get('value'))
         frame = self.frames.get(variable[0], None)
@@ -604,7 +580,6 @@ class Interpret (TypeParser):
 
     def call(self, args, index):
         if len(args) != 1:
-            print("num of args call")
             self.error.exit_code(32) # chybny pocet argumentu
         self.called_from_label.append(index+1) # ulozi pozici instrukce následující po call
         index = self.jumpCriteria(args[0])
@@ -629,10 +604,8 @@ def XMLparse(tree):
 
     # Zpracování <program> tag
     if root.tag != 'program':
-        print("program")
         error.exit_code(31)
     if root.get('language') != 'IPPcode22':
-        print("lang")
         error.exit_code(32)
 
     # Zpracování <instruction> tag
@@ -643,7 +616,6 @@ def XMLparse(tree):
     while i < len(root):
         child = root[i]
         if child.tag != 'instruction':
-            print("instruction")
             error.exit_code(31)
 
         if child.get('opcode') == 'LABEL':
@@ -656,7 +628,6 @@ def XMLparse(tree):
         inst_args = []
         for child_child in sorted(child, key=lambda x: x.tag):
             if not re.match("^arg[123]$", child_child.tag):
-                print("child_tag")
                 error.exit_code(32)
             inst_args.append({"type": child_child.get("type"), "value": child_child.text})
         instructions.append({"opcode": child.get("opcode"), "args": inst_args})
